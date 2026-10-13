@@ -1,6 +1,9 @@
 pipeline {
 agent any
 
+environment {
+    DOCKER = 'C:\\Users\\pmadh\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+}
 
 stages {
     stage('Checkout') {
@@ -9,26 +12,29 @@ stages {
         }
     }
 
+    stage('Check Docker') {
+        steps {
+            bat '"%DOCKER%" version'
+        }
+    }
+
     stage('Build Docker Image') {
         steps {
-            bat 'docker build -t library-management-system:%BUILD_NUMBER% .'
+            bat '"%DOCKER%" build -t library-management-system:%BUILD_NUMBER% .'
         }
     }
 
     stage('Automated Tests') {
         steps {
-            bat 'docker run --rm library-management-system:%BUILD_NUMBER% python -m pytest -q tests'
+            bat '"%DOCKER%" run --rm library-management-system:%BUILD_NUMBER% python -m pytest -q tests'
         }
     }
 
     stage('Deploy') {
         steps {
-            bat 'docker volume create library_data'
-
-            bat '''
-                docker rm -f library-management-app 2>NUL
-                docker run -d --name library-management-app -p 5001:5000 -v library_data:/app/data library-management-system:%BUILD_NUMBER%
-            '''
+            bat '"%DOCKER%" volume create library_data'
+            bat '"%DOCKER%" rm -f library-management-app'
+            bat '"%DOCKER%" run -d --name library-management-app -p 5001:5000 -v library_data:/app/data library-management-system:%BUILD_NUMBER%'
         }
     }
 
@@ -53,6 +59,5 @@ post {
         echo 'Pipeline failed. Check Console Output for details.'
     }
 }
-
 
 }

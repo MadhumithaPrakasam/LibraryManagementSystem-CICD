@@ -1,0 +1,83 @@
+---
+- name: Deploy Library Management System
+  hosts: local
+  connection: local
+  gather_facts: false
+
+  vars:
+    project_dir: /mnt/c/LibraryManagementSystem-CICD
+    dockerfile_path: /mnt/c/LibraryManagementSystem-CICD/Dockerfile
+    app_container: library-management-app
+    app_image: library-management-system:ansible
+    data_volume: library_data
+
+  tasks:
+    - name: Confirm Dockerfile exists
+      ansible.builtin.stat:
+        path: "{{ dockerfile_path }}"
+      register: dockerfile_check
+
+    - name: Stop if Dockerfile is missing
+      ansible.builtin.fail:
+        msg: "Dockerfile not found at {{ dockerfile_path }}"
+      when: not dockerfile_check.stat.exists
+
+    - name: Build Docker image
+      ansible.builtin.command:
+        argv:
+          - docker
+          - build
+          - --file
+          - "{{ dockerfile_path }}"
+          - --tag
+          - "{{ app_image }}"
+          - "{{ project_dir }}"
+      changed_when: true
+
+    - name: Create persistent data volume
+      ansible.builtin.command:
+        argv:
+          - docker
+          - volume
+          - create
+          - "{{ data_volume }}"
+      changed_when: false
+
+    - name: Remove old application container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - rm
+          - -f
+          - "{{ app_container }}"
+      failed_when: false
+      changed_when: false
+
+    - name: Start application container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - run
+          - -d
+          - --name
+          - "{{ app_container }}"
+          - -p
+          - "5001:5000"
+          - -v
+          - "{{ data_volume }}:/app/data"
+          - "{{ app_image }}"
+      changed_when: true
+
+    - name: Verify application health
+      ansible.builtin.uri:
+        url: http://localhost:5001/health
+        method: GET
+        status_code: 200
+      register: health_result
+      retries: 10
+      delay: 3
+      until: health_result.status == 200
+
+    - name: Display deployment result
+      ansible.builtin.debug:
+        msg: "Library Management System deployed successfully"

@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<h1>Members</h1><section><table><tr><th>ID</th><th>Name</th><th>Email</th></tr>{% for m in members %}<tr><td>{{ m.id }}</td><td>{{ m.name }}</td><td>{{ m.email }}</td></tr>{% else %}<tr><td colspan="3">No members registered.</td></tr>{% endfor %}</table></section>{% endblock %}

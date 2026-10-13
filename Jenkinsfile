@@ -1,42 +1,58 @@
 pipeline {
-  agent any
-  environment {
-    IMAGE_NAME = 'library-management-system'
-    CONTAINER_NAME = 'library-management-app'
-    DATA_VOLUME = 'library_data'
-    APP_PORT = '5001'
-  }
-  options { timestamps(); disableConcurrentBuilds() }
-  stages {
-    stage('Checkout') { steps { checkout scm } }
+agent any
+
+```
+stages {
+    stage('Checkout') {
+        steps {
+            checkout scm
+        }
+    }
+
     stage('Build Docker Image') {
-      steps {
-        sh 'docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .'
-        sh 'docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest'
-      }
+        steps {
+            bat 'docker build -t library-management-system:%BUILD_NUMBER% .'
+        }
     }
+
     stage('Automated Tests') {
-      steps { sh 'docker run --rm ${IMAGE_NAME}:${BUILD_NUMBER} python -m pytest -q tests' }
+        steps {
+            bat 'docker run --rm library-management-system:%BUILD_NUMBER% python -m pytest -q tests'
+        }
     }
+
     stage('Deploy') {
-      steps {
-        sh '''
-          docker volume create ${DATA_VOLUME}
-          docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
-          docker run -d --name ${CONTAINER_NAME} --restart unless-stopped -p ${APP_PORT}:5000 -v ${DATA_VOLUME}:/app/data ${IMAGE_NAME}:${BUILD_NUMBER}
-        '''
-      }
+        steps {
+            bat 'docker volume create library_data'
+
+            bat '''
+                docker rm -f library-management-app 2>NUL
+                docker run -d --name library-management-app -p 5001:5000 -v library_data:/app/data library-management-system:%BUILD_NUMBER%
+            '''
+        }
     }
+
     stage('Verify Deployment') {
-      steps {
-        sh 'sleep 3'
-        sh 'docker ps --filter "name=${CONTAINER_NAME}"'
-        sh 'docker exec ${CONTAINER_NAME} python -c "import urllib.request; print(urllib.request.urlopen(\'http://127.0.0.1:5000/health\').read().decode())"'
-      }
+        steps {
+            powershell '''
+                $response = Invoke-WebRequest -Uri "http://localhost:5001/health" -UseBasicParsing
+                if ($response.StatusCode -ne 200) {
+                    throw "Application health check failed"
+                }
+                Write-Output $response.Content
+            '''
+        }
     }
-  }
-  post {
-    success { echo 'Library CI/CD completed successfully.' }
-    failure { echo 'Pipeline failed. Check the failed stage logs.' }
-  }
+}
+
+post {
+    success {
+        echo 'CI/CD pipeline completed successfully!'
+    }
+    failure {
+        echo 'Pipeline failed. Check Console Output for details.'
+    }
+}
+```
+
 }

@@ -2,8 +2,7 @@ pipeline {
 agent any
 
 environment {
-    DOCKER = 'C:\\Users\\pm
-adh\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+    DOCKER = 'C:\\Users\\pmadh\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
     APP_IMAGE = 'library-management-system'
     ANSIBLE_IMAGE = 'library-ansible-runner'
 }

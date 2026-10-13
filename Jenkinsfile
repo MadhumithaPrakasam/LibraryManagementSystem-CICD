@@ -41,13 +41,12 @@ stages {
     stage('Deploy with Ansible') {
         steps {
             bat '''
-                "%DOCKER%" run --rm ^
-                  -v "%WORKSPACE%:/workspace" ^
-                  -v //./pipe/docker_engine:/var/run/docker.sock ^
-                  -w /workspace ^
-                  %ANSIBLE_IMAGE% ^
-                  ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e app_image=%APP_IMAGE%:%BUILD_NUMBER%
-            '''
+    "%DOCKER%" run --rm ^
+      -e DOCKER_HOST=tcp://host.docker.internal:2375 ^
+      -v "%WORKSPACE%:/workspace" ^
+      -w /workspace ^
+      library-ansible-runner ^
+      a
         }
     }
 
